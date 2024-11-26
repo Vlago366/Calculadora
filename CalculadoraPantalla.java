@@ -20,7 +20,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-public class CalculadoraPantalla extends JFrame {
+public class CalculadoraPantalla extends JFrame{
 
     // Creamos una variable global para el JTextArea
     private JTextArea areaTexto;
@@ -157,29 +157,43 @@ public class CalculadoraPantalla extends JFrame {
             @Override
             public void keyPressed(KeyEvent e) {
                 int keyCode = e.getKeyCode();
-                
-                // Permitimos solo los números del teclado numérico, las teclas de 0-9, y los operadores
-                if (!isValidKey(keyCode)) {
-                    e.consume(); // Si la tecla no es válida, la bloqueamos
+    
+                if (isValidKey(keyCode)) {
+                    String keyText = "";
+    
+                    // Convertir las teclas numéricas y operadores a texto
+                    if (keyCode >= KeyEvent.VK_NUMPAD0 && keyCode <= KeyEvent.VK_NUMPAD9) {
+                        keyText = String.valueOf(keyCode - KeyEvent.VK_NUMPAD0); // Números del teclado numérico
+                    } else if (keyCode == KeyEvent.VK_ADD) {
+                        keyText = "+";
+                    } else if (keyCode == KeyEvent.VK_SUBTRACT) {
+                        keyText = "-";
+                    } else if (keyCode == KeyEvent.VK_MULTIPLY) {
+                        keyText = "*";
+                    } else if (keyCode == KeyEvent.VK_DIVIDE) {
+                        keyText = "/";
+                    } else if (keyCode == KeyEvent.VK_ENTER) {
+                        manejarLaOperacion(); // Procesar la operación al presionar Intro
+                        return; // Salir del método sin añadir más texto
+                    }
+    
+                    areaTexto.append(keyText); // Añadir el texto correspondiente al área
                 }
+                e.consume(); // Consumir el evento para evitar comportamiento adicional
             }
     
-            // Verifica si la tecla es válida (números, operadores y retroceso)
+            // Verificar si la tecla pertenece al teclado numérico o es un operador válido
             private boolean isValidKey(int keyCode) {
-                return (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9) // Teclas de 0-9
-                        || (keyCode >= KeyEvent.VK_NUMPAD0 && keyCode <= KeyEvent.VK_NUMPAD9) // Teclas del teclado numérico
-                        || keyCode == KeyEvent.VK_BACK_SPACE // Permite la tecla de retroceso
-                        || isOperatorKey(keyCode); // Permite los operadores
-            }
-    
-            // Verifica si el código de la tecla es un operador válido
-            private boolean isOperatorKey(int keyCode) {
-                return keyCode == KeyEvent.VK_PLUS || keyCode == KeyEvent.VK_MINUS
-                        || keyCode == KeyEvent.VK_MULTIPLY || keyCode == KeyEvent.VK_DIVIDE;
+                return (keyCode >= KeyEvent.VK_NUMPAD0 && keyCode <= KeyEvent.VK_NUMPAD9) // Teclas numéricas
+                        || keyCode == KeyEvent.VK_ADD // Suma
+                        || keyCode == KeyEvent.VK_SUBTRACT // Resta
+                        || keyCode == KeyEvent.VK_MULTIPLY // Multiplicación
+                        || keyCode == KeyEvent.VK_DIVIDE // División
+                        || keyCode == KeyEvent.VK_ENTER; // Intro para igual
             }
         });
     }
-
+    
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             CalculadoraPantalla ventana = new CalculadoraPantalla();
