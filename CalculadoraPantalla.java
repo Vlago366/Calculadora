@@ -11,6 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,7 +70,7 @@ public class CalculadoraPantalla extends JFrame{
         String[] botones = {
                 "1", "2", "3", "/", "4", "5", "6", "*",
                 "7", "8", "9", "-", "0", "+", "=", "C"
-        }; // Son los nombres de los botones
+        }; // Son los nombres de los
         for (String texto : botones) { // Para el array con los botones mientras haya
             Button button = new Button(texto); // Se crea un boton con el contenido de dicha posición
             button.setFont(new Font("Arial", Font.PLAIN, 20)); // Se describe la fuente y el tamaño
@@ -112,26 +114,34 @@ public class CalculadoraPantalla extends JFrame{
     }
     
     private String calcularOperacion(String texto, String operadores) {
-        String regex = "(-?\\d+(?:\\.\\d+)?)([" + operadores + "])(-?\\d+(?:\\.\\d+)?)"; //Expresion para encontrar operadores
-
-        // Crear un patrón de expresión regular
-        Pattern pattern = Pattern.compile(regex); // crea un patron que contiene * y /
-        Matcher matcher = pattern.matcher(texto); // busca el patron en el siguiente texto
-
-        while (matcher.find()) { // el metodo find de la clase match devuelve true si encuentra el patrón buscado
-
-            double num1 = Double.parseDouble(matcher.group(1)); // El grupo 1 contiene los numeros antes del operador
-            String operador = matcher.group(2); // El grupo dos contiene el operador
-            double num2 = Double.parseDouble(matcher.group(3)); // El grupo tres contiene el numero que se va a operar
-
-            double resultado = 0; // variable que contiene el resultado
-            switch (operador) { // Segun el operador hará una operación u otra
+        // Expresión regular para encontrar números y operadores
+        String regex = "(-?\\d+(?:[.,]\\d+)?)([" + operadores + "])(-?\\d+(?:[.,]\\d+)?)";
+    
+        // Crear el patrón
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(texto);
+    
+        // Configurar el formateador para la salida final
+        DecimalFormat df = new DecimalFormat("#.##");
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance();
+        symbols.setDecimalSeparator(',');
+        df.setDecimalFormatSymbols(symbols);
+    
+        while (matcher.find()) {
+            // Convertir los números a formato estándar para cálculo
+            double num1 = Double.parseDouble(matcher.group(1).replace(',', '.'));
+            String operador = matcher.group(2);
+            double num2 = Double.parseDouble(matcher.group(3).replace(',', '.'));
+            double resultado = 0;
+    
+            // Realizar la operación
+            switch (operador) {
                 case "*":
                     resultado = num1 * num2;
                     break;
                 case "/":
                     if (num2 == 0) {
-                        throw new ArithmeticException("División por cero"); // en caso de intentar dividir por cero
+                        throw new ArithmeticException("División por cero");
                     }
                     resultado = num1 / num2;
                     break;
@@ -142,15 +152,18 @@ public class CalculadoraPantalla extends JFrame{
                     resultado = num1 - num2;
                     break;
             }
-
-            // Reemplazar la operación con el resultado
-            texto = texto.substring(0, matcher.start()) + resultado + texto.substring(matcher.end()); //Obtiene la posicion de donde comienza la operacion y donde termina y la reemplaza por el resultado
-            
-            matcher = pattern.matcher(texto); // vuelve a buscar el patrón en el texto
+    
+            // Reemplazar la operación con el resultado sin formatear
+            texto = texto.substring(0, matcher.start()) + resultado + texto.substring(matcher.end());
+    
+            // Volver a buscar el patrón en el texto actualizado
+            matcher = pattern.matcher(texto);
         }
-
-        return texto; // Devolver el texto con el resultado final
+    
+        // Formatear el resultado final antes de devolverlo
+        return texto.replace('.', ','); // Cambiar el punto por coma para la visualización final
     }
+    
 
     public void activarTeclado() {
         areaTexto.addKeyListener(new KeyAdapter() {
