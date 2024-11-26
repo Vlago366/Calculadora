@@ -11,6 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -22,6 +24,7 @@ public class CalculadoraPantalla extends JFrame {
 
     // Creamos una variable global para el JTextArea
     private JTextArea areaTexto;
+    private boolean tecladoOn = true;
 
     public CalculadoraPantalla() {
         super("Calculadora"); // nombre de la pestaña
@@ -41,46 +44,16 @@ public class CalculadoraPantalla extends JFrame {
         areaTexto.setFont(new Font("Arial", Font.PLAIN, 14)); // La fuente en el espacio de texto
         areaTexto.setEditable(false); // Evita que el usuario escriba directamente en el área de texto
 
-        // Filtrar entradas desde el teclado
-        areaTexto.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                char key = e.getKeyChar();
-
-                // Permitir solo los números del teclado numérico derecho y los operadores
-                if (!(Character.isDigit(key) || isNumericKeypad(key) || isOperator(key)
-                        || key == KeyEvent.VK_BACK_SPACE)) {
-                    e.consume(); // Si la tecla no es válida, la bloqueamos
-                }
-            }
-
-            // Verifica si el carácter pertenece al teclado numérico derecho
-            private boolean isNumericKeypad(char key) {
-                return key == KeyEvent.VK_NUMPAD0 ||
-                        key == KeyEvent.VK_NUMPAD1 ||
-                        key == KeyEvent.VK_NUMPAD2 ||
-                        key == KeyEvent.VK_NUMPAD3 ||
-                        key == KeyEvent.VK_NUMPAD4 ||
-                        key == KeyEvent.VK_NUMPAD5 ||
-                        key == KeyEvent.VK_NUMPAD6 ||
-                        key == KeyEvent.VK_NUMPAD7 ||
-                        key == KeyEvent.VK_NUMPAD8 ||
-                        key == KeyEvent.VK_NUMPAD9;
-            }
-
-            // Verifica si el carácter es un operador válido
-            private boolean isOperator(char key) {
-                return key == '+' || key == '-' || key == '*' || key == '/';
-            }
-        });
-
         JScrollPane scrollTexto = new JScrollPane(areaTexto); // ayuda a corregir el cambio de lineas al escribir en la
-                                                              // calculadora
-        pantallaSecundaria.add(scrollTexto, BorderLayout.CENTER); // agrega la capacidad de escribir y la central al
-                                                                  // panel secundario donde se escribe los números
+
+        if(tecladoOn){
+            activarTeclado();
+        }
+        
+        pantallaSecundaria.add(scrollTexto, BorderLayout.CENTER); // panel secundario donde se escribe los números
 
         add(pantallaSecundaria); // Añade el panel de la pantalla al JFrame
-
+        setResizable(false);
         setSize((d.width / 2), 600); // Indica el ancho y alto del recuadro
         setLocationRelativeTo(null); // Mantiene la ventana siempre centrada
         setLayout(null); // Layout nulo, para tener control manual de los tamaños
@@ -96,7 +69,6 @@ public class CalculadoraPantalla extends JFrame {
                 "1", "2", "3", "/", "4", "5", "6", "*",
                 "7", "8", "9", "-", "0", "+", "=", "C"
         }; // Son los nombres de los botones
-
         for (String texto : botones) { // Para el array con los botones mientras haya
             Button button = new Button(texto); // Se crea un boton con el contenido de dicha posición
             button.setFont(new Font("Arial", Font.PLAIN, 20)); // Se describe la fuente y el tamaño
@@ -122,6 +94,90 @@ public class CalculadoraPantalla extends JFrame {
     }
 
     public void manejarLaOperacion() {
+        String texto = areaTexto.getText(); // Obtener el texto actual en el JTextArea
+    
+        if (texto.isEmpty()) { //Si no hay nada escrito
+            return; // retorna
+        }
+    
+        try {
+            texto = calcularOperacion(texto, "*/"); // comprueba primero si hay multiplicacion o división y actualiza el contenido del texto
+    
+            texto = calcularOperacion(texto, "+-"); // Luego hace las sumas y restas y actualiza el valor de texto
+    
+            areaTexto.setText(texto); // Escribe el texto en la pantalla
+        } catch (Exception e) {
+            areaTexto.setText("Error"); // Si peta en el proceso
+        }
+    }
+    
+    private String calcularOperacion(String texto, String operadores) {
+        String regex = "(-?\\d+(?:\\.\\d+)?)([" + operadores + "])(-?\\d+(?:\\.\\d+)?)"; //Expresion para encontrar operadores
+
+        // Crear un patrón de expresión regular
+        Pattern pattern = Pattern.compile(regex); // crea un patron que contiene * y /
+        Matcher matcher = pattern.matcher(texto); // busca el patron en el siguiente texto
+
+        while (matcher.find()) { // el metodo find de la clase match devuelve true si encuentra el patrón buscado
+
+            double num1 = Double.parseDouble(matcher.group(1)); // El grupo 1 contiene los numeros antes del operador
+            String operador = matcher.group(2); // El grupo dos contiene el operador
+            double num2 = Double.parseDouble(matcher.group(3)); // El grupo tres contiene el numero que se va a operar
+
+            double resultado = 0; // variable que contiene el resultado
+            switch (operador) { // Segun el operador hará una operación u otra
+                case "*":
+                    resultado = num1 * num2;
+                    break;
+                case "/":
+                    if (num2 == 0) {
+                        throw new ArithmeticException("División por cero"); // en caso de intentar dividir por cero
+                    }
+                    resultado = num1 / num2;
+                    break;
+                case "+":
+                    resultado = num1 + num2;
+                    break;
+                case "-":
+                    resultado = num1 - num2;
+                    break;
+            }
+
+            // Reemplazar la operación con el resultado
+            texto = texto.substring(0, matcher.start()) + resultado + texto.substring(matcher.end()); //Obtiene la posicion de donde comienza la operacion y donde termina y la reemplaza por el resultado
+            
+            matcher = pattern.matcher(texto); // vuelve a buscar el patrón en el texto
+        }
+
+        return texto; // Devolver el texto con el resultado final
+    }
+
+    public void activarTeclado() {
+        areaTexto.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+                
+                // Permitimos solo los números del teclado numérico, las teclas de 0-9, y los operadores
+                if (!isValidKey(keyCode)) {
+                    e.consume(); // Si la tecla no es válida, la bloqueamos
+                }
+            }
+    
+            // Verifica si la tecla es válida (números, operadores y retroceso)
+            private boolean isValidKey(int keyCode) {
+                return (keyCode >= KeyEvent.VK_0 && keyCode <= KeyEvent.VK_9) // Teclas de 0-9
+                        || (keyCode >= KeyEvent.VK_NUMPAD0 && keyCode <= KeyEvent.VK_NUMPAD9) // Teclas del teclado numérico
+                        || keyCode == KeyEvent.VK_BACK_SPACE // Permite la tecla de retroceso
+                        || isOperatorKey(keyCode); // Permite los operadores
+            }
+    
+            // Verifica si el código de la tecla es un operador válido
+            private boolean isOperatorKey(int keyCode) {
+                return keyCode == KeyEvent.VK_PLUS || keyCode == KeyEvent.VK_MINUS
+                        || keyCode == KeyEvent.VK_MULTIPLY || keyCode == KeyEvent.VK_DIVIDE;
+            }
+        });
     }
 
     public static void main(String[] args) {
